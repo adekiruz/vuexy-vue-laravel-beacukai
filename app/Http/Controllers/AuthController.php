@@ -19,33 +19,28 @@ class AuthController extends Controller
      */
     public function register(Request $request)
     {
-        try {
-            $request->validate([
-                'name'       => 'required|string',
-                'email'      => 'required|string|unique:users',
-                'password'   => 'required|string',
-            ]);
-    
-            $user = new User([
-                'name'     => $request->name,
-                'email'    => $request->email,
-                'password' => bcrypt($request->password),
-            ]);
-    
-            if ($user->save()) {
-                $tokenResult = $user->createToken('Personal Access Token');
-                $token = $tokenResult->plainTextToken;
-    
-                return response()->json([
-                    'message'     => 'Successfully created user!',
-                    'accessToken' => $token,
-                ], 201);
-            } else {
-                return response()->json(['error' => 'Provide proper details']);
-            }
-        } catch (\Exception $th) {
-            // throw $th;
-            return response()->json(['error' => $th]);
+        $request->validate([
+            'name'     => 'required|string',
+            'email'    => 'required|string|unique:users',
+            'password' => 'required|string',
+        ]);
+
+        $user = new User([
+            'name'     => $request->name,
+            'email'    => $request->email,
+            'password' => bcrypt($request->password),
+        ]);
+
+        if ($user->save()) {
+            $tokenResult = $user->createToken('Personal Access Token');
+            $token = $tokenResult->plainTextToken;
+
+            return response()->json([
+                'message'     => 'Successfully created user!',
+                'accessToken' => $token,
+            ], 201);
+        } else {
+            return response()->json(['error' => 'Provide proper details']);
         }
     }
 
@@ -73,12 +68,29 @@ class AuthController extends Controller
         }
 
         $user = $request->user();
-        $tokenResult = $user->createToken('Personal Access Token');
-        $token = $tokenResult->plainTextToken;
+        $accessToken = $user->createToken('access_token', ['*'], date_create()->setTimestamp(time() + config('sanctum.expiration') * 60));
+        $refreshToken = $user->createToken('refresh_token', ['*'], date_create()->setTimestamp(time() + config('sanctum.rt_expiration') * 60));
 
         return response()->json([
-            'accessToken' => $token,
-            'token_type'  => 'Bearer',
+            'accessToken'  => $accessToken->plainTextToken,
+            'refreshToken' => $refreshToken->plainTextToken,
+            "userData"     => [
+                "id"       => 1,
+                "fullName" => "John Doe",
+                "username" => "johndoe",
+                "avatar"   => "/images/_/_/_/_/laravel-vue/resources/js/src/assets/images/avatars/13-small.png",
+                "email"    => "admin@demo.com",
+                "role"     => "admin",
+                "ability"  => [
+                    [
+                        "action"  => "manage",
+                        "subject" => "all"
+                    ]
+                ],
+                "extras"   => [
+                    "eCommerceCartItemsCount" => 5
+                ]
+            ]
         ]);
     }
 
